@@ -1,35 +1,30 @@
 import asyncio
 
-HOST = 'localhost'
-PORT = 9095
-
+HOST = '127.0.0.1'
+PORT = 8888
 
 async def handle_echo(reader, writer):
     data = await reader.read(100)
     message = data.decode()
+    addr = writer.get_extra_info('peername')
 
+    print(f"Приём {message} от {addr}")
+
+    print(f"Отправка: {message}")
     writer.write(data)
     await writer.drain()
 
+    print("Остановка соединения")
     writer.close()
 
+async def main():
+    server = await asyncio.start_server(
+        handle_echo, HOST, PORT)
 
-loop = asyncio.get_event_loop()
-coro = asyncio.start_server(handle_echo, HOST, PORT, loop=loop)
-server = loop.run_until_complete(coro)
+    addr = server.sockets[0].getsockname()
+    print(f'Прослушивание порта {addr}')
 
-# Serve requests until Ctrl+C is pressed
-print('Serving on {}'.format(server.sockets[0].getsockname()))
-try:
-    loop.run_forever()
-except KeyboardInterrupt:
-    pass
+    async with server:
+        await server.serve_forever()
 
-# Close the server
-server.close()
-loop.run_until_complete(server.wait_closed())
-loop.close()
-
-# async def main():
-#     server = await asyncio.start_server(handle_echo, HOST, PORT)
-#     await server.serve_forever()
+asyncio.run(main())
